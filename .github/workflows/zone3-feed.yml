@@ -1,0 +1,41 @@
+# Každé 3 hodiny vyrobí feed pre Shoptet a zverejní ho na GitHub Pages.
+# Potrebné nastavenie v repozitári:
+#   Settings › Secrets › Actions: ZONE3_AVAILABILITY_URL (odkaz na dostupnostný feed aj s heslom)
+#                                 PRICING_RULES_JSON (obsah pricing_rules.json)
+#                                 FEED_PATH (náhodný, ťažko uhádnuteľný názov, napr. a8f3k2.../zone3.xml)
+#   Settings › Pages: Source = GitHub Actions
+name: ZONE3 feed pre TRIEX
+on:
+  schedule:
+    - cron: "5 */3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Vyrobiť feed
+        env:
+          ZONE3_AVAILABILITY_URL: ${{ secrets.ZONE3_AVAILABILITY_URL }}
+          PRICING_RULES_JSON: ${{ secrets.PRICING_RULES_JSON }}
+          ZONE3_CATALOG_URL: https://b2b.levelsportkoncept.cz/files/RESULT26_ZONE3.xml
+        run: |
+          mkdir -p "public/$(dirname "${{ secrets.FEED_PATH }}")"
+          python build_feed.py "public/${{ secrets.FEED_PATH }}"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
