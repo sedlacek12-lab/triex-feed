@@ -1,0 +1,10 @@
+config.local.json
+*.html
+*.csv
+__pycache__/
+public/
+pricing_rules.json
+zone3_konkurencia_ukazka.json
+zone3_texty_ukazka.json
+zone3_ukazka_produkty.json
+*.xml
