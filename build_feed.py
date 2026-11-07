@@ -13,7 +13,7 @@ Použitie:
 Bez parametrov berie URL z config.local.json alebo z premenných prostredia
 ZONE3_CATALOG_URL / ZONE3_AVAILABILITY_URL (pre GitHub Actions).
 """
-import argparse, json, os, sys
+import argparse, json, os, sys, urllib.request
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
@@ -100,7 +100,21 @@ def product_details(item, p, texts):
         sub(tp, "VALUE", "/tabulka-velkosti/")
 
 
-def build(catalog, avail, rules, own_codes, hide_items, known_codes=frozenset(), texts=None):
+TRIEX_HEUREKA = "https://www.triex.sk/heureka/export/products.xml"
+
+
+def triex_eans(url=TRIEX_HEUREKA):
+    """EAN kódy produktov, ktoré sú teraz viditeľné na TRIEX (z jeho Heureka feedu)."""
+    try:
+        with urllib.request.urlopen(url, timeout=120) as r:
+            root = ET.fromstring(r.read())
+        return {(i.findtext("EAN") or "").strip().lstrip("0") for i in root.iter("SHOPITEM")} - {""}
+    except Exception as e:  # bez prístupu radšej nič vypredané neposielame
+        print("Upozornenie: TRIEX feed nedostupný:", e, file=sys.stderr)
+        return set()
+
+
+def build(catalog, avail, rules, own_codes, hide_items, known_codes=frozenset(), texts=None, live_eans=frozenset()):
     texts = texts or {}
     root = ET.Element("SHOP")
     stats = {"produkty": 0, "viditelne": 0, "skryte_dodavatel": 0, "skryte_stare": 0, "varianty": 0, "bez_ceny": 0}
@@ -109,7 +123,8 @@ def build(catalog, avail, rules, own_codes, hide_items, known_codes=frozenset(),
         if not variants:
             continue
         in_stock = any(avail.get(v["code"], {}).get("sklad", 0) > 0 for v in variants)
-        if not in_stock and not any(v["code"] in known_codes for v in variants):
+        on_triex = any((v.get("ean") or "") in live_eans for v in variants)
+        if not in_stock and not on_triex:
             continue  # nemáme ho a dodávateľ ho nemá -> nezakladať
         item = sub(root, "SHOPITEM")
         any_stock = False
@@ -128,18 +143,22 @@ def build(catalog, avail, rules, own_codes, hide_items, known_codes=frozenset(),
         rows = [(v, a, pr if pr is not None else fallback) for v, a, pr in rows]
         if any_stock:
             product_details(item, p, texts)
-        exists = any(v["code"] in known_codes for v in variants)
+        exists = on_triex or any(v["code"] in known_codes for v in variants)
         show = any_stock and (exists or bool(images_for(p)))   # nový produkt bez fotky nepredávame
         sub(item, "VISIBILITY", "visible" if show else "hidden")
         if len(rows) == 1 and (rows[0][0]["variant"] in (None, "", "OS")):
             v, amount, price = rows[0]
             sub(item, "CODE", v["code"])
+            if v.get("ean"):
+                sub(item, "EAN", v["ean"].zfill(13) if len(v["ean"]) < 13 else v["ean"])
             variant_fields(item, amount, price)
         else:
             vs = sub(item, "VARIANTS")
             for v, amount, price in rows:
                 ve = sub(vs, "VARIANT")
                 sub(ve, "CODE", v["code"])
+                if v.get("ean"):
+                    sub(ve, "EAN", v["ean"].zfill(13) if len(v["ean"]) < 13 else v["ean"])
                 size_param(ve, v["variant"])
                 variant_fields(ve, amount, price)
         stats["produkty"] += 1
@@ -176,7 +195,7 @@ def main():
     own_codes = {c for o in load_json("zone3_vlastny_sklad.json") for c in o["kody"]}
     hide_items = load_json("zone3_skryt_stare.json")
     known = set(load_json("triex_zname_kody.json")) if os.path.exists(os.path.join(HERE, "triex_zname_kody.json")) else set()
-    root, stats = build(catalog, avail, rules, own_codes, hide_items, known, zone3_texts.load_overrides())
+    root, stats = build(catalog, avail, rules, own_codes, hide_items, known, zone3_texts.load_overrides(), triex_eans())
     xml = minidom.parseString(ET.tostring(root, encoding="utf-8")).toprettyxml(indent=" ", encoding="utf-8")
     open(args.out, "wb").write(xml)
     print(json.dumps(stats, ensure_ascii=False))
