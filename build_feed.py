@@ -17,7 +17,7 @@ import argparse, json, os, sys
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
-import pricing, zone3_availability, zone3_parse
+import pricing, zone3_availability, zone3_parse, zone3_texts
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 AV_IN = "Skladom (doručenie do 4 dní)"
@@ -67,13 +67,50 @@ def variant_fields(el, amount, price):
         sub(el, "PRICE_VAT", f"{price:.2f}")
 
 
-def build(catalog, avail, rules, own_codes, hide_items):
+APPAREL = {"wetsuit", "swimrun", "trisuit", "trishorts", "tritop", "womenswim", "jammer", "menswim", "swimskin", "neoacc"}
+
+
+EXTRA_IMG = json.load(open(os.path.join(HERE, "zone3_obrazky.json"))) if os.path.exists(os.path.join(HERE, "zone3_obrazky.json")) else {}
+
+
+def images_for(p):
+    """Fotky dodávateľa; ak chýbajú, oficiálne fotky z zone3.com (zone3_obrazky.json)."""
+    return p["images"] or EXTRA_IMG.get(p["code"], [])
+
+
+def product_details(item, p, texts):
+    """Údaje pre založenie nového produktu (pri existujúcich ich Shoptet ignoruje - nie sú zaškrtnuté)."""
+    t = zone3_texts.build_texts(p, texts)
+    sub(item, "NAME", t["nazov"])
+    sub(item, "SHORT_DESCRIPTION", f"<p>{t['kratky_popis']}</p>" if not t["kratky_popis"].startswith("<") else t["kratky_popis"])
+    sub(item, "DESCRIPTION", t["popis_html"])
+    sub(item, "MANUFACTURER", "Zone3")
+    sub(item, "SUPPLIER", "Zone3")
+    sub(item, "SEO_TITLE", t["seo_title"])
+    sub(item, "META_DESCRIPTION", t["meta_description"])
+    cats = sub(item, "CATEGORIES")
+    sub(cats, "CATEGORY", t["kategoria"])
+    if images_for(p):
+        imgs = sub(item, "IMAGES")
+        for u in images_for(p)[:10]:
+            sub(imgs, "IMAGE", u)
+    if zone3_texts.detect(p["name_cs"])[3] in APPAREL:
+        tp = sub(sub(item, "TEXT_PROPERTIES"), "TEXT_PROPERTY")
+        sub(tp, "NAME", "#sizes_table#")
+        sub(tp, "VALUE", "/tabulka-velkosti/")
+
+
+def build(catalog, avail, rules, own_codes, hide_items, known_codes=frozenset(), texts=None):
+    texts = texts or {}
     root = ET.Element("SHOP")
     stats = {"produkty": 0, "viditelne": 0, "skryte_dodavatel": 0, "skryte_stare": 0, "varianty": 0, "bez_ceny": 0}
     for p in catalog:
         variants = [v for v in p["variants"] if v["code"] not in own_codes]
         if not variants:
             continue
+        in_stock = any(avail.get(v["code"], {}).get("sklad", 0) > 0 for v in variants)
+        if not in_stock and not any(v["code"] in known_codes for v in variants):
+            continue  # nemáme ho a dodávateľ ho nemá -> nezakladať
         item = sub(root, "SHOPITEM")
         any_stock = False
         rows = []
@@ -87,7 +124,13 @@ def build(catalog, avail, rules, own_codes, hide_items):
                 stats["bez_ceny"] += 1
             any_stock |= amount > 0
             rows.append((v, amount, price))
-        sub(item, "VISIBILITY", "visible" if any_stock else "hidden")
+        fallback = next((r[2] for r in rows if r[2] is not None), None)
+        rows = [(v, a, pr if pr is not None else fallback) for v, a, pr in rows]
+        if any_stock:
+            product_details(item, p, texts)
+        exists = any(v["code"] in known_codes for v in variants)
+        show = any_stock and (exists or bool(images_for(p)))   # nový produkt bez fotky nepredávame
+        sub(item, "VISIBILITY", "visible" if show else "hidden")
         if len(rows) == 1 and (rows[0][0]["variant"] in (None, "", "OS")):
             v, amount, price = rows[0]
             sub(item, "CODE", v["code"])
@@ -101,7 +144,7 @@ def build(catalog, avail, rules, own_codes, hide_items):
                 variant_fields(ve, amount, price)
         stats["produkty"] += 1
         stats["varianty"] += len(rows)
-        stats["viditelne" if any_stock else "skryte_dodavatel"] += 1
+        stats["viditelne" if show else "skryte_dodavatel"] += 1
 
     for h in hide_items:  # staré modely, ktoré dodávateľ už nemá
         item = sub(root, "SHOPITEM")
@@ -132,7 +175,8 @@ def main():
     rules = json.loads(os.environ["PRICING_RULES_JSON"]) if os.environ.get("PRICING_RULES_JSON") else load_json("pricing_rules.json")
     own_codes = {c for o in load_json("zone3_vlastny_sklad.json") for c in o["kody"]}
     hide_items = load_json("zone3_skryt_stare.json")
-    root, stats = build(catalog, avail, rules, own_codes, hide_items)
+    known = set(load_json("triex_zname_kody.json")) if os.path.exists(os.path.join(HERE, "triex_zname_kody.json")) else set()
+    root, stats = build(catalog, avail, rules, own_codes, hide_items, known, zone3_texts.load_overrides())
     xml = minidom.parseString(ET.tostring(root, encoding="utf-8")).toprettyxml(indent=" ", encoding="utf-8")
     open(args.out, "wb").write(xml)
     print(json.dumps(stats, ensure_ascii=False))
