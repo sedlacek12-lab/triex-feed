@@ -17,7 +17,7 @@ import argparse, json, os, sys, urllib.request
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
-import pricing, zone3_availability, zone3_parse, zone3_texts
+import pricing, zone3_availability, zone3_parse, zone3_seo, zone3_texts
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 AV_IN = "Skladom (doručenie do 4 dní)"
@@ -81,6 +81,10 @@ def images_for(p):
 def product_details(item, p, texts):
     """Údaje pre založenie nového produktu (pri existujúcich ich Shoptet ignoruje - nie sú zaškrtnuté)."""
     t = zone3_texts.build_texts(p, texts)
+    seo = zone3_seo.zostav("", t["nazov"], "")   # predajné SEO texty podľa modelu (ak model poznáme)
+    if seo:
+        t.update(nazov=seo["nazov"], kratky_popis=seo["kratky"], popis_html=seo["popis"],
+                 seo_title=seo["metaTitle"], meta_description=seo["metaDescription"])
     sub(item, "NAME", t["nazov"])
     sub(item, "SHORT_DESCRIPTION", f"<p>{t['kratky_popis']}</p>" if not t["kratky_popis"].startswith("<") else t["kratky_popis"])
     sub(item, "DESCRIPTION", t["popis_html"])
