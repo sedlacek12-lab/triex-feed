@@ -29,6 +29,11 @@ jobs:
         run: |
           mkdir -p "public/$(dirname "${{ secrets.FEED_PATH }}")"
           python build_feed.py "public/${{ secrets.FEED_PATH }}"
+      - name: Vyrobiť feed Sportimport (ALÉ, CYCPLUS, 4iiii, QM)
+        env:
+          PRICING_RULES_JSON: ${{ secrets.PRICING_RULES_JSON }}
+        run: |
+          python build_sportimport.py "public/$(dirname "${{ secrets.FEED_PATH }}")/sportimport.xml"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
