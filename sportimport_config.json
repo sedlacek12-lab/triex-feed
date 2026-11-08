@@ -1,0 +1,18 @@
+{
+ "feed_url": "https://www.sportimport.cz/export/xml/catalogue/all/eur/lang-sk",
+ "znacky": {
+  "2": "ALÉ Cycling Clothing",
+  "44": "CYCPLUS",
+  "10": "4iiii Innovations",
+  "45": "QM Sportscare"
+ },
+ "ale_min_modelovy_rok": 2027,
+ "ale_min_ks_skladom": 3,
+ "vynechat_kody": ["QM70020001", "PMD100102C", "PML100102C", "PMR100102C"],
+ "_vysvetlivky": {
+  "znacky": "ID značiek vo feede Sportimport, ktoré sa importujú na TRIEX",
+  "ale_min_modelovy_rok": "Nové ALÉ produkty sa zakladajú len z tejto kolekcie a novšej",
+  "ale_min_ks_skladom": "Nový ALÉ model sa založí, len ak má dodávateľ spolu aspoň toľko kusov",
+  "vynechat_kody": "Kódy, ktoré sa nikdy nezakladajú (montážne služby 4iiii, reklamná taška QM)"
+ }
+}
