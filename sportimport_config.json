@@ -8,11 +8,40 @@
  },
  "ale_min_modelovy_rok": 2027,
  "ale_min_ks_skladom": 3,
- "vynechat_kody": ["QM70020001", "PMD100102C", "PML100102C", "PMR100102C"],
+ "vynechat_kody": [
+  "QM70020001",
+  "PMD100102C",
+  "PML100102C",
+  "PMR100102C"
+ ],
  "_vysvetlivky": {
   "znacky": "ID značiek vo feede Sportimport, ktoré sa importujú na TRIEX",
   "ale_min_modelovy_rok": "Nové ALÉ produkty sa zakladajú len z tejto kolekcie a novšej",
   "ale_min_ks_skladom": "Nový ALÉ model sa založí, len ak má dodávateľ spolu aspoň toľko kusov",
-  "vynechat_kody": "Kódy, ktoré sa nikdy nezakladajú (montážne služby 4iiii, reklamná taška QM)"
+  "vynechat_kody": "Kódy, ktoré sa nikdy nezakladajú (montážne služby 4iiii, reklamná taška QM)",
+  "ale_nazvy": "Ručne zvolené názvy pre modely ALÉ, ktoré dodávateľ vedie pod rovnakým názvom (kľúč = kód modelu bez kódu farby)"
+ },
+ "ale_nazvy": {
+  "L250454": "Pánsky letný cyklistický dres ALÉ Pragma Color Block – krátky rukáv",
+  "L250634": "Pánsky letný cyklistický dres ALÉ Pragma Color Block – dlhý rukáv",
+  "L250434": "Pánske letné cyklistické nohavice ALÉ Off-Road Gravel-Pro",
+  "L250437": "Pánske letné cyklistické nohavice ALÉ Off-Road Gravel-Pro – eukalyptová",
+  "L240524": "Dámsky letný cyklistický dres ALÉ Pragma Color Block – ergonomický strih",
+  "L250844": "Dámsky letný cyklistický dres ALÉ Pragma Color Block – raglánové rukávy",
+  "L261434": "Dámske letné cyklistické nohavice ALÉ PR-E Strada 2.0",
+  "L250647": "Dámske letné cyklistické nohavice ALÉ Strada 2.0",
+  "L211564": "Detské letné cyklistické nohavice ALÉ Kid – s trakmi",
+  "L211534": "Detské letné cyklistické nohavice ALÉ Kid – bez trakov",
+  "L230784": "Pánska zimná bunda ALÉ R-EV1 Riparo",
+  "L230787": "Pánska zimná bunda ALÉ R-EV1 Riparo – Stucco",
+  "L250114": "Pánsky zateplený cyklistický dres ALÉ R-EV1 Warm Race Green",
+  "L270054": "Pánsky cyklistický dres s dlhým rukávom ALÉ R-EV1 Warm Race – na jar a jeseň",
+  "L260024": "Pánske zimné dlhé cyklistické nohavice ALÉ Pragma Winter 2.0 s trakmi",
+  "L260044": "Pánske zimné 3/4 cyklistické nohavice ALÉ Pragma Winter 2.0 s trakmi",
+  "L260054": "Pánske zateplené krátke cyklistické nohavice ALÉ Pragma Winter 2.0 s trakmi",
+  "L270014": "Pánsky zateplený cyklistický dres ALÉ R-EV1 Grafenium – čierna",
+  "L270018": "Pánsky zateplený cyklistický dres ALÉ R-EV1 Grafenium – Excalibur a Graphite",
+  "L250254": "Dámska zimná cyklistická bunda ALÉ Klimatik K-Tornado – čierna",
+  "L250257": "Dámska zimná cyklistická bunda ALÉ Klimatik K-Tornado – farebné prevedenia"
  }
 }

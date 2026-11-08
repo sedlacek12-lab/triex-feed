@@ -201,7 +201,9 @@ def build(root, cfg, rules, na_triex):
             pripony[id(k[0])] = nv
 
     for p, existuje, sklad, pouzite, hlavna, zaklad in kandidati:
-        tx = T.ale_texty(pouzite, hlavna, pripony.get(id(p), "")) if p["ale"] else T.ina_texty(p["znacka"], hlavna)
+        presny = next((cfg.get("ale_nazvy", {})[k] for k in p["kluc"].split("+") if k in cfg.get("ale_nazvy", {})), "")
+        tx = T.ale_texty(pouzite, hlavna, "" if presny else pripony.get(id(p), ""), presny) if p["ale"] \
+            else T.ina_texty(p["znacka"], hlavna)
         any_stock = any(sklad[id(it)] > 0 for it in pouzite)
         item = sub(shop, "SHOPITEM")
         if any_stock and not existuje:

@@ -233,7 +233,7 @@ def rozlisenie(desc, rok):
     return f"kolekcia {rok}" if rok else ""
 
 
-def ale_texty(polozky, vybrana, pripona=""):
+def ale_texty(polozky, vybrana, pripona="", nazov_presny=""):
     """polozky = všetky farby modelu (ET elementy), vybrana = reprezentatívna farba."""
     p = {pr.findtext("name"): pr.findtext("value") for pr in vybrana.iter("property")}
     druh = p.get("Druh") or "Doplnkový sortiment ALÉ"
@@ -256,13 +256,16 @@ def ale_texty(polozky, vybrana, pripona=""):
     pre = {"Muži": "pre mužov", "Ženy": "pre ženy", "Deti": "pre deti"}.get(pohl, "")
 
     veta = f"{typ} ALÉ {model}".strip() + (f" {pre}" if pre and not re.search(GENDER, typ, re.I) else "")
+    if nazov_presny:            # ručne zvolený názov (sportimport_config.json -> ale_nazvy)
+        nazov = veta = nazov_presny
     kratky = veta + (f" {sez}" if sez else "") + (f" – {strih_k}" if strih_k else "") + "."
     if t:
         kratky += f" Ideálny teplotný rozsah {t[0]} až {t[1]} °C."
     kratky += " Talianska kvalita ALÉ, prémiové materiály a strih, v ktorom sa budete cítiť skvele aj na dlhej trase."
 
     h = [f"<h2>{e(nazov)}</h2>"]
-    uvod = (f"<p><strong>{e(veta)}</strong> je {e(kw)} od talianskej značky ALÉ Cycling, ktorá neďaleko Verony vyrába cyklistické oblečenie "
+    sloveso = "sú" if re.search(r"(nohavice|ponožky|rukavice|návleky|doplnky)$", kw) else "je"
+    uvod = (f"<p><strong>{e(veta)}</strong> {sloveso} {e(kw)} od talianskej značky ALÉ Cycling, ktorá neďaleko Verony vyrába cyklistické oblečenie "
             f"pre profesionálne tímy aj náročných amatérov. ")
     if sez:
         uvod += f"Model je určený {e(sez)}"
