@@ -298,6 +298,12 @@ def ina_kategoria(znacka, it, nazov):
         if "hrudný pás" in n:
             return "Cyklistika > GPS cyklopočítače"
         return "Cyklistika > Cyklistické wattmetre"
+    if znacka == "Ravemen Lights":
+        if any(k in n for k in ("pumpa", "minipumpa", "zvonček", "telefón", "cyklopočítač", "náradie", "airtag")):
+            return "Cyklistika > Cyklistické doplnky"
+        return "Cyklistika > Svietidlá"
+    if znacka == "Trivio":
+        return "Cyklistika > Cyklistické doplnky"
     # CYCPLUS
     if any(k in n for k in ("trenažér", "virtuálne radenie", "rotor", "ventilátor", "smart bike", "mini trenažér")):
         return "Cyklistika > Cyklotrenažéry a príslušenstvo"
@@ -324,6 +330,15 @@ def ina_nazov(znacka, it):
     if znacka == "4iiii Innovations":
         n = n.replace("(right-side)", "(pravá strana)").replace("(left-side)", "(ľavá strana)")
         n = n.replace("wattmetre Precision", "wattmetre 4iiii Precision")
+    if znacka == "Ravemen Lights":
+        n = n.replace("Cycklistický", "Cyklistický").strip()
+        if "ravemen" not in n.lower():
+            m = re.search(r"\b([A-Z]{1,3}\d+[A-Z0-9]*)\b", n)
+            n = (n[:m.start()] + "Ravemen " + n[m.start():]) if m else f"{n} – Ravemen"
+    if znacka == "Trivio":
+        n = re.sub(r"\bTRIVIO\b", "Trivio", n)
+        if "trivio" not in n.lower():
+            n = f"{n} – Trivio"
     if znacka == "CYCPLUS":
         n = re.sub(r"\bCYCPLUS\b", "Cycplus", n, flags=re.I).replace("pre trenažérov", "pre trenažéry")
         if "cycplus" not in n.lower():
@@ -338,11 +353,23 @@ INTRO = {
                           "Precision wattmetre sú ľahké, presné a pripojíte ich k akémukoľvek cyklopočítaču s ANT+ alebo Bluetooth.", "wattmeter"),
     "CYCPLUS": ("Cycplus prináša chytré cyklistické vychytávky s výborným pomerom ceny a výkonu – od elektronických púmp cez radary a cyklopočítače "
                 "až po smart trenažéry kompatibilné so Zwiftom a ďalšími aplikáciami.", "cyklistické príslušenstvo"),
+    "Ravemen Lights": ("Ravemen je špecialista na cyklistické svetlá – vyrába výkonné predné svetlá s nemecky tvarovaným lúčom, ktorý neoslňuje protiidúcich, "
+                       "chytré zadné svetlá s brzdovým senzorom aj radary. Svetlá sa nabíjajú cez USB-C a vydržia aj dlhé nočné tréningy.", "cyklistické svetlo"),
+    "Trivio": ("Trivio je overená značka cyklistických komponentov, doplnkov a náradia s výborným pomerom ceny a kvality. "
+               "Nájdete u nás duše, kufre, CO2 bombičky, pumpy aj multikľúče, ktoré obstoja v tréningu aj na pretekoch.", "cyklistické doplnky"),
+}
+
+TRIVIO_KAT = {
+    "Komponenty": "Spoľahlivý komponent, ktorý udrží váš bicykel v dobrej kondícii. Pri výbere skontrolujte rozmer či kompatibilitu s vaším bicyklom – ak si nie ste istí, radi poradíme.",
+    "Doplnky": "Praktický doplnok, ktorý by nemal chýbať vo výbave cyklistu ani triatlonistu – na tréningu aj v pretekoch.",
+    "Náradie": "Kvalitné náradie na údržbu a rýchle opravy bicykla doma aj na ceste.",
 }
 
 
-def ina_texty(znacka, it):
+def ina_texty(znacka, it, pridaj_kod=False):
     nazov = ina_nazov(znacka, it)
+    if pridaj_kod:
+        nazov = f"{nazov} ({re.sub(r'^(RVM|THV|CPLUS|QM)', '', it.findtext('code'))})"
     desc_raw = it.findtext("description") or ""
     cesky = bool(CZ.search(desc_raw))
     desc = "" if cesky else cisti_popis(desc_raw)
@@ -352,11 +379,15 @@ def ina_texty(znacka, it):
     veta = re.split(r"(?<=[.!?])\s", prvy, 1)[0] if prvy else ""
     if len(veta) > 170 or len(veta) < 25:
         veta = ""
-    kratky = (veta + " " if veta else "") + f"Originálny produkt {znacka.replace(' Innovations', '').replace(' Sportscare', '')} s rýchlym doručením a odborným poradenstvom TRIEX.sk."
+    kratky = (veta + " " if veta else "") + f"Originálny produkt {znacka.replace(' Innovations', '').replace(' Sportscare', '').replace(' Lights', '')} s rýchlym doručením a odborným poradenstvom TRIEX.sk."
     h = [f"<h2>{e(nazov)}</h2>", f"<p>{e(intro)}</p>"]
     if desc:
         h.append("<h3>Popis produktu</h3>")
         h.append(desc if desc.lstrip().startswith("<") else f"<p>{desc}</p>")
+    if znacka == "Trivio":
+        kat = next((pr.findtext("value") for pr in it.iter("property") if pr.findtext("name") == "Kategória"), "")
+        if kat in TRIVIO_KAT:
+            h.append(f"<h3>Na čo sa hodí</h3><p>{e(TRIVIO_KAT[kat])}</p>")
     h.append(PRECO)
     return {
         "nazov": nazov, "kratky": kratky, "popis": "\n".join(h), "kategoria": ina_kategoria(znacka, it, nazov),

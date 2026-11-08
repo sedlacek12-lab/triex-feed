@@ -22,7 +22,8 @@ AV_OUT = "Vypredané"
 TRIEX_HEUREKA = "https://www.triex.sk/heureka/export/products.xml"
 SUPPLIER = "Sportimport.cz"
 ZNACKA_SHOPTET = {"ALÉ Cycling Clothing": "ALÉ Cycling Clothing", "CYCPLUS": "CYCPLUS",
-                  "4iiii Innovations": "4iiii Innovations", "QM Sportscare": "QM Sportscare"}
+                  "4iiii Innovations": "4iiii Innovations", "QM Sportscare": "QM Sportscare",
+                  "Ravemen Lights": "Ravemen Lights", "Trivio": "Trivio"}
 
 
 def load(src):
@@ -87,7 +88,10 @@ def ceny(it, rules):
         return None
     if nakup is None:
         return round(moc, 2)
-    return pricing.propose(nakup, moc, [], rules)["cena"]
+    cena = pricing.propose(nakup, moc, [], rules)["cena"]
+    if cena < moc * 0.9:      # zaokrúhlenie na ,90 by lacný diel príliš zlacnilo -> ostáva odporúčaná cena
+        cena = round(moc, 2)
+    return cena
 
 
 def varianty_polozky(it):
@@ -200,10 +204,12 @@ def build(root, cfg, rules, na_triex):
                 nv += f"(model {k[0]['kluc'].split('+')[0]})"
             pripony[id(k[0])] = nv
 
+    # rovnaké názvy pri ostatných značkách (napr. dva rôzne držiaky Ravemen) -> doplniť kód dodávateľa
+    ine = Counter(T.ina_nazov(k[0]["znacka"], k[4]) for k in kandidati if not k[0]["ale"])
     for p, existuje, sklad, pouzite, hlavna, zaklad in kandidati:
         presny = next((cfg.get("ale_nazvy", {})[k] for k in p["kluc"].split("+") if k in cfg.get("ale_nazvy", {})), "")
         tx = T.ale_texty(pouzite, hlavna, "" if presny else pripony.get(id(p), ""), presny) if p["ale"] \
-            else T.ina_texty(p["znacka"], hlavna)
+            else T.ina_texty(p["znacka"], hlavna, ine[T.ina_nazov(p["znacka"], hlavna)] > 1)
         any_stock = any(sklad[id(it)] > 0 for it in pouzite)
         item = sub(shop, "SHOPITEM")
         if any_stock and not existuje:
